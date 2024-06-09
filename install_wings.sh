@@ -116,7 +116,8 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOL
 
-        sudo systemctl enable --now wings
+        sudo systemctl enable wings
+        sudo systemctl start wings
         if [ $? -ne 0 ]; then
             print_error "Failed to daemonize Wings."
             exit 1
@@ -135,11 +136,50 @@ EOL
     fi
 }
 
+# Function to install Certbot
+install_certbot() {
+    if ! command -v certbot &> /dev/null; then
+        print_success "Installing Certbot..."
+        sudo apt-get update && sudo apt-get install -y certbot
+        if [ $? -ne 0 ]; then
+            print_error "Failed to install Certbot."
+            exit 1
+        else
+            print_success "Certbot installed successfully."
+        fi
+    else
+        print_success "Certbot is already installed."
+    fi
+}
+
+# Function to obtain SSL certificate
+obtain_ssl_certificate() {
+    DOMAIN=$(whiptail --inputbox "Enter the domain to secure with SSL:" 8 39 --title "SSL Certificate" 3>&1 1>&2 2>&3)
+    if [ $? -eq 0 ]; then
+        print_success "Obtaining SSL certificate for $DOMAIN..."
+        sudo certbot certonly --standalone -d "$DOMAIN"
+        if [ $? -ne 0 ]; then
+            print_error "Failed to obtain SSL certificate for $DOMAIN."
+            exit 1
+        else
+            print_success "SSL certificate obtained successfully for $DOMAIN."
+        fi
+    else
+        print_error "Domain entry cancelled."
+        exit 1
+    fi
+}
+
 # Main script execution
 install_docker
 install_docker_compose
 install_wings
 configure_wings
 daemonize_wings
+install_certbot
+obtain_ssl_certificate
 
-print_success "Wings installation and configuration completed successfully!"
+# Ensure Wings service is enabled
+sudo systemctl enable wings
+
+print_success "Wings installation, configuration, and SSL setup completed successfully!"
