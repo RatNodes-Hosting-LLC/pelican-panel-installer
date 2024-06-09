@@ -22,6 +22,20 @@ if ! command -v whiptail &> /dev/null; then
     fi
 fi
 
+# Prompt for the domain to secure with SSL
+DOMAIN=$(whiptail --inputbox "Enter the domain to secure with SSL:" 8 39 --title "SSL Certificate" 3>&1 1>&2 2>&3)
+if [ $? -ne 0 ]; then
+    print_error "Domain entry cancelled."
+    exit 1
+fi
+
+# Prompt for the Wings configuration code
+WINGS_CONFIG=$(whiptail --inputbox "Enter the Wings configuration code (you can copy it from the Panel administrative view):" 15 60 --title "Wings Configuration" 3>&1 1>&2 2>&3)
+if [ $? -ne 0 ]; then
+    print_error "Wings configuration entry cancelled."
+    exit 1
+fi
+
 # Function to install Docker
 install_docker() {
     if ! command -v docker &> /dev/null; then
@@ -77,8 +91,7 @@ install_wings() {
 configure_wings() {
     if [ ! -f /etc/pelican/config.yml ]; then
         print_success "Configuring Wings..."
-        whiptail --msgbox "Please go to your Panel administrative view, select Nodes from the sidebar, and create a new node. Copy the configuration code block and paste it into a new file called config.yml in /etc/pelican." 15 60
-        sudo nano /etc/pelican/config.yml
+        echo "$WINGS_CONFIG" | sudo tee /etc/pelican/config.yml > /dev/null
         if [ $? -ne 0 ]; then
             print_error "Failed to configure Wings."
             exit 1
@@ -154,19 +167,13 @@ install_certbot() {
 
 # Function to obtain SSL certificate
 obtain_ssl_certificate() {
-    DOMAIN=$(whiptail --inputbox "Enter the domain to secure with SSL:" 8 39 --title "SSL Certificate" 3>&1 1>&2 2>&3)
-    if [ $? -eq 0 ]; then
-        print_success "Obtaining SSL certificate for $DOMAIN..."
-        sudo certbot certonly --standalone -d "$DOMAIN"
-        if [ $? -ne 0 ]; then
-            print_error "Failed to obtain SSL certificate for $DOMAIN."
-            exit 1
-        else
-            print_success "SSL certificate obtained successfully for $DOMAIN."
-        fi
-    else
-        print_error "Domain entry cancelled."
+    print_success "Obtaining SSL certificate for $DOMAIN..."
+    sudo certbot certonly --standalone -d "$DOMAIN"
+    if [ $? -ne 0 ]; then
+        print_error "Failed to obtain SSL certificate for $DOMAIN."
         exit 1
+    else
+        print_success "SSL certificate obtained successfully for $DOMAIN."
     fi
 }
 
@@ -179,7 +186,7 @@ daemonize_wings
 install_certbot
 obtain_ssl_certificate
 
-# Ensure Wings service is enabled
-sudo systemctl enable wings
+# Delete the installer script
+rm -- "$0"
 
 print_success "Wings installation, configuration, and SSL setup completed successfully!"
