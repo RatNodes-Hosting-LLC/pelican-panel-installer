@@ -85,15 +85,10 @@ chmod +x webserver_config_nginx.sh
 
 Same as before, download and run the script.  
 
-### Download and set executable
+### Download and set executable then run the script
 ```shell
 wget https://raw.githubusercontent.com/dazeb/pelican-installer/main/install_wings.sh
 chmod +x install_wings.sh
-./install_wings.sh
-```
-
-### Run the script
-```shell
 ./install_wings.sh
 ```
 
